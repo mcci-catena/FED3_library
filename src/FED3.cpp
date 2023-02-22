@@ -89,8 +89,8 @@ void FED3::logLeftPoke(){
     else{
       Event = "Left";
     }
-    if (LoRaTransmit)
-      fed3wan.run(pointerToFED3); //Tx data via uart
+    /* if (LoRaTransmit)
+      fed3wan.run(pointerToFED3); //Tx data via uart */
 
     logdata();
     Left = false;
@@ -113,8 +113,8 @@ void FED3::logRightPoke(){
     else{
       Event = "Right";
     }
-    if (LoRaTransmit)
-      fed3wan.run(pointerToFED3); //Tx data via uart
+    /* if (LoRaTransmit)
+      fed3wan.run(pointerToFED3); //Tx data via uart */
 
     logdata();
     Right = false; 
@@ -244,8 +244,8 @@ void FED3::Feed(int pulse, bool pixelsoff) {
       interPelletInterval = now.unixtime() - lastPellet;  //calculate time in seconds since last pellet logged
       lastPellet  = now.unixtime();
 
-      if (LoRaTransmit)
-        fed3wan.run(pointerToFED3); //Tx data via uart
+      /* if (LoRaTransmit)
+        fed3wan.run(pointerToFED3); //Tx data via uart */
 
       logdata();
       numMotorTurns = 0; //reset numMotorTurns
@@ -1181,6 +1181,8 @@ void FED3::logdata() {
   Blink(GREEN_LED, 25, 2);
   logfile.flush();
   logfile.close();
+  if (LoRaTransmit)
+      fed3wan.run(pointerToFED3); //Tx data via uart
 }
 
 
