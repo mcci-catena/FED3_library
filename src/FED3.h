@@ -45,6 +45,7 @@ This device includes hardware and code from:
 #include <Fonts/Org_01.h>
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_AHTX0.h>
+#include <stdint.h>
 
 // Pin definitions
 #define NEOPIXEL        A1
@@ -92,7 +93,7 @@ class FED3 {
         void writeHeader();
         void writeConfigFile();
         void writeFEDmode();
-        void error(uint8_t errno);
+        void error(uint8_t fed3_errno);
         void getFilename(char *filename);
         bool suppressSDerrors = false;  //set to true to suppress SD card errors at startup 
 

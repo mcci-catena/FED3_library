@@ -185,6 +185,9 @@ void FED3::Feed(int pulse, bool pixelsoff) {
           leftInterval = (millis()-leftPokeTime);
           UpdateDisplay();
           Event = "LeftWithPellet";
+          if (LoRaTransmit)
+            fed3wan.run(pointerToFED3); //Tx data via uart
+
           logdata();
           }
 
@@ -196,7 +199,10 @@ void FED3::Feed(int pulse, bool pixelsoff) {
           rightInterval = (millis()-rightPokeTime);
           UpdateDisplay();
           Event = "RightWithPellet";
-          logdata();       
+          if (LoRaTransmit)
+            fed3wan.run(pointerToFED3); //Tx data via uart
+
+          logdata();
           }
         } 
       
@@ -212,6 +218,9 @@ void FED3::Feed(int pulse, bool pixelsoff) {
           leftInterval = (millis()-leftPokeTime);
           UpdateDisplay();
           Event = "LeftWithPellet";
+          if (LoRaTransmit)
+            fed3wan.run(pointerToFED3); //Tx data via uart
+
           logdata();
           }
 
@@ -223,7 +232,10 @@ void FED3::Feed(int pulse, bool pixelsoff) {
           rightInterval = (millis()-rightPokeTime);
           UpdateDisplay();
           Event = "RightWithPellet";
-          logdata();       
+          if (LoRaTransmit)
+            fed3wan.run(pointerToFED3); //Tx data via uart
+
+          logdata();
           }
       }
 
@@ -349,6 +361,9 @@ bool FED3::RotateDisk(int steps) {
        leftInterval = (millis() - leftPokeTime);
        UpdateDisplay();
        Event = "LeftDuringDispense";
+       if (LoRaTransmit)
+         fed3wan.run(pointerToFED3); //Tx data via uart
+
        logdata();
      }
 
@@ -360,6 +375,9 @@ bool FED3::RotateDisk(int steps) {
        rightInterval = (millis() - rightPokeTime);
        UpdateDisplay();
        Event = "RightDuringDispense";
+       if (LoRaTransmit)
+         fed3wan.run(pointerToFED3); //Tx data via uart
+
        logdata();
      }
     
@@ -422,6 +440,9 @@ void FED3::Timeout(int seconds) {
       leftInterval = (millis() - leftPokeTime);
       UpdateDisplay();
       Event = "LeftinTimeOut";
+      if (LoRaTransmit)
+        fed3wan.run(pointerToFED3); //Tx data via uart
+
       logdata();
     }
 
@@ -433,6 +454,9 @@ void FED3::Timeout(int seconds) {
       rightInterval = (millis() - rightPokeTime);
       UpdateDisplay();
       Event = "RightinTimeout";
+      if (LoRaTransmit)
+        fed3wan.run(pointerToFED3); //Tx data via uart
+
       logdata();
     }
   }
@@ -1188,16 +1212,16 @@ void FED3::logdata() {
 // If any errors are detected with the SD card upon boot this function
 // will blink both LEDs on the Feather M0, turn the NeoPixel into red wipe pattern,
 // and display "Check SD Card" on the screen
-void FED3::error(uint8_t errno) {
+void FED3::error(uint8_t fed3_errno) {
   if (suppressSDerrors == false){
     DisplaySDError();
     while (1) {
       uint8_t i;
-      for (i = 0; i < errno; i++) {
+      for (i = 0; i < fed3_errno; i++) {
         Blink(GREEN_LED, 25, 2);
         colorWipe(strip.Color(5, 0, 0), 25); // RED
       }
-      for (i = errno; i < 10; i++) {
+      for (i = fed3_errno; i < 10; i++) {
         colorWipe(strip.Color(0, 0, 0), 25); // clear
       }
     }

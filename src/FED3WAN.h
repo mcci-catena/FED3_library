@@ -23,6 +23,8 @@ Author:
 #include "RTClib.h"                                     //Include RTC library
 #include <stdint.h>
 
+#include <map>
+
 #define HEADER_LENGTH   0x4
 
 // real-tiem clock
@@ -56,11 +58,11 @@ class FED3WAN:FED3 {
         BYTE_CNT    = int(SerialMessageOffset::BYTE_CNT),     //!< Index of byte counter
         };
 
-    uint8_t buf[42];    // this sets the largest buffer size
+    uint8_t buf[44];    // this sets the largest buffer size
     uint8_t *p;
     uint16_t u16timeOut;
     uint32_t u32time, u32timeOut;
-    uint8_t au8Buffer[42];
+    uint8_t au8Buffer[44];
     uint8_t u8BufferSize;
     uint16_t u16OutCnt;
 
@@ -257,39 +259,48 @@ void FED3WAN::putV(float V)
 
 uint8_t FED3WAN::sessionType(String fed3_session)
     {
-    uint8_t sessionIndex;
+    uint8_t sessionIndex = 0;
 
-    if (fed3_session == "ClassicFED3")
-        sessionIndex = 1;
-    else if (fed3_session == "ClosedEconomy_PR1")
-        sessionIndex = 2;
-    else if (fed3_session == "Dispenser")
-        sessionIndex = 3;
-    else if (fed3_session == "Extinction")
-        sessionIndex = 4;
-    else if (fed3_session == "FixedRatio1")
-        sessionIndex = 5;
-    else if (fed3_session == "FR_Customizable")
-        sessionIndex = 6;
-    else if (fed3_session == "FreeFeeding")
-        sessionIndex = 7;
-    else if (fed3_session == "MenuExample")
-        sessionIndex = 8;
-    else if (fed3_session == "Optogenetic_Self_Stim")
-        sessionIndex = 9;
-    else if (fed3_session == "Pavlovian")
-        sessionIndex = 10;
-    else if (fed3_session == "ProbReversalTask")
-        sessionIndex = 11;
-    else if (fed3_session == "ProgressiveRatio")
-        sessionIndex = 12;
-    else if (fed3_session == "RandomRatio")
-        sessionIndex = 13;
+    std::map<String, int> session {
+        {"Classic", 1},
+        {"ClosedEcon_PR1", 2},
+        {"Dispenser", 3},
+        {"Ext", 4},
+        {"FR1", 5},
+        {"FRCustom", 6},
+        {"FreeFeed", 7},
+        {"Menu", 8},
+        {"OptoStim", 9},
+        {"Pavlov", 10},
+        {"Prob_Reversal", 11},
+        {"ProgRat", 12},
+        {"RndRatio", 13},
+        };
+
+    auto search = session.find(fed3_session);
+
+    if (search != session.end())
+        sessionIndex = search->second;
     else
         sessionIndex = 0;
 
     return sessionIndex;
     }
+
+enum class Events : uint8_t
+    {
+    left = 1,
+    leftshort,
+    leftwithpellet,
+    leftintimeout,
+    leftduringdispense,
+    right,
+    rightshort,
+    rightwithpellet,
+    rightintimeout,
+    rightduringdispense,
+    pellet,
+    };
 
 void FED3WAN::run(FED3 *fed3)
     {
@@ -329,48 +340,70 @@ void FED3WAN::run(FED3 *fed3)
     uint8_t session_type = this->sessionType(fed3->sessiontype);
     put(session_type);
 
+    // battery voltage
     this->putV(fed3->measuredvbat);
+
+    // number of motor turns
     this->put4u(fed3->numMotorTurns+1);
     
+    // FixedRatio
     this->put2u(fed3->FR);
 
+    // Active event
     uint8_t event_active;
-    uint16_t pokeTime;
-    uint16_t retrievalTime;
-    uint16_t event_with_time;
 
-    if (fed3->Event == "Left")
-            {
-            pokeTime = fed3->leftInterval / 4;
-            pokeTime &= 0x3FFF;
-            event_active = 1;
-            event_with_time = (pokeTime << 2) | event_active;
-            }
-    else if (fed3->Event == "Right")
-            {
-            pokeTime = fed3->rightInterval / 4;
-            pokeTime &= 0x3FFF;
-            event_active = 2;
-            event_with_time = (pokeTime << 2) | event_active;
-            }
-    else if (fed3->Event == "Pellet")
-            {
-            retrievalTime = fed3->retInterval / 4;
-            retrievalTime &= 0x3FFF;
-            event_active = 3;
-            event_with_time = (retrievalTime << 2) | event_active;
-            }
+    std::map<String, int> event {
+        {"Left", (uint8_t) Events::left},
+        {"LeftShort", (uint8_t) Events::leftshort},
+        {"LeftWithPellet", (uint8_t) Events::leftwithpellet},
+        {"LeftinTimeout", (uint8_t) Events::leftintimeout},
+        {"LeftDuringDispense", (uint8_t) Events::leftduringdispense},
+        {"Right", (uint8_t) Events::right},
+        {"RightShort", (uint8_t) Events::rightshort},
+        {"RightWithPellet", (uint8_t) Events::rightwithpellet},
+        {"RightinTimeout", (uint8_t) Events::rightintimeout},
+        {"RightDuringDispense", (uint8_t) Events::rightduringdispense},
+        {"Pellet", (uint8_t) Events::pellet},
+        };
+
+    auto search = event.find(fed3->Event);
+
+    if (search != event.end())
+        event_active = search->second;
     else
-            {
-            pokeTime = 0;
-            retrievalTime = 0;
-            event_active = 0;
-            }
+        event_active = 0;
 
-    this->put2u(event_with_time);
+    this->put(event_active);
+
+    // poke time / retrieval time
+    uint16_t pokeTime = 0;
+    uint16_t retrievalTime = 0;
+    uint16_t event_time = 0;
+
+    if (event_active > 0 && event_active < 6)
+        {
+        pokeTime = fed3->leftInterval / 4;
+        event_time = pokeTime;
+        }
+    else if (event_active > 5 && event_active < 11)
+        {
+        pokeTime = fed3->rightInterval / 4;
+        event_time = pokeTime;
+        }
+    else if (event_active == 11)
+        {
+        retrievalTime = fed3->retInterval / 4;
+        event_time = retrievalTime;
+        }
+
+    this->put2u(event_time);
+
+    // poke counts
     this->put4u(fed3->LeftCount);
     this->put4u(fed3->RightCount);
     this->put4u(fed3->PelletCount);
+
+    // block pellet count
     this->put2u(fed3->BlockPelletCount);
 
     auto pMessage = this->getbase();
